@@ -10,6 +10,7 @@
 """
 Train and eval functions used in main.py
 """
+import json
 import math
 import os
 import sys
@@ -112,14 +113,20 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
             data_loader.dataset.ann_folder,
             output_dir=os.path.join(output_dir, "panoptic_eval"),
         )
- 
+
+    # it = 0    
+    all_det = [] ## edit 1
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
+        # it += 1
+        # if it > 20:
+        #     break
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         outputs = model(samples)
 
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors['bbox'](outputs, orig_target_sizes)
+        all_det += results ## edit 2
  
         if 'segm' in postprocessors.keys():
             target_sizes = torch.stack([t["size"] for t in targets], dim=0)
@@ -164,6 +171,14 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         stats['PQ_all'] = panoptic_res["All"]
         stats['PQ_th'] = panoptic_res["Things"]
         stats['PQ_st'] = panoptic_res["Stuff"]
+    
+    all_det_jsonified = []
+    for item in all_det:
+        converted_dict = {key: value.cpu().numpy().tolist() for key, value in item.items()}
+        all_det_jsonified.append(converted_dict)
+    if args.save_eval_det_file: ## edit 3
+        with open(args.save_eval_det_file, 'w') as f: ## edit 3
+            json.dump(all_det_jsonified, f, indent=4) ## edit 3
     return stats, coco_evaluator
  
     
