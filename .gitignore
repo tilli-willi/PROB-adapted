@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Data files
+data/
+
+exps/
+
+models/dino_resnet50_pretrain.pth
